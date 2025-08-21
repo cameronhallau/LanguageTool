@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QLabel, QPushButton, QCheckBox, \
     QStatusBar, QMenuBar, \
-    QSizePolicy, QApplication, QLineEdit
-from PyQt5.QtGui import QDesktopServices, QKeyEvent
+    QSizePolicy, QApplication, QLineEdit, QHBoxLayout
+from PyQt5.QtGui import QDesktopServices, QKeyEvent, QPixmap, QMovie, QPainter, QIcon
 from PyQt5.QtCore import QUrl, pyqtSignal, Qt, QObject, QEvent, QSize
 from .audio_selector import AudioSelector
 
@@ -221,43 +221,36 @@ class MainWindowBase(QMainWindow):
         self.updateSimpleViewLayout()
 
     def updateSimpleViewLayout(self):
-        """Updates the layout for simple view mode"""
+        """Show/hide widgets and reposition them based on simple_view state"""
+        if not hasattr(self, "_layout"):
+            return
+
         simple_view = settings.value("simple_view", False, type=bool)
-        
         if simple_view:
-            # In simple view, make the Add Note button span 75% of the width
-            # Remove the view_last_note_button from layout
-            self._layout.removeWidget(self.view_last_note_button)
+            # Hide widgets not used in simple view
             self.view_last_note_button.hide()
-            
-            # Remove tags from layout
-            self._layout.removeWidget(self.tags)
             self.tags.hide()
-            
-            # Remove word textbox from layout
-            self._layout.removeWidget(self.word)
             self.word.hide()
-            
-            # Reposition image viewer to be properly centered and not obscured
+
+            # Add trim buttons above the Add Note button in a horizontal layout
+            if hasattr(self, 'trim_before_button') and hasattr(self, 'trim_after_button'):
+                self.trim_button_container = QWidget()
+                h_layout = QHBoxLayout(self.trim_button_container)
+                h_layout.setContentsMargins(0, 0, 0, 0)
+                h_layout.addWidget(self.trim_before_button)
+                h_layout.addWidget(self.trim_after_button)
+                self._layout.addWidget(self.trim_button_container, 11, 0, 1, 3)
+
+            # Update the Add Note button to span 3 columns
+            self._layout.removeWidget(self.toanki_button)
+            self._layout.addWidget(self.toanki_button, 12, 0, 1, 3)
+
+            # Center image viewer
             self._layout.removeWidget(self.image_viewer)
             self._layout.addWidget(self.image_viewer, 0, 1, 4, 1)  # Move to center column (1) instead of right column (2)
             # Center the image viewer by adjusting column stretches
             self._layout.setColumnStretch(0, 1)
             self._layout.setColumnStretch(1, 0)  # No stretch for center column
-            self._layout.setColumnStretch(2, 1)
-            
-            # Add trim buttons above the Add Note button
-            if hasattr(self, 'trim_before_button') and hasattr(self, 'trim_after_button'):
-                self._layout.addWidget(self.trim_before_button, 11, 0, 1, 1)  # Left button
-                self._layout.addWidget(self.trim_after_button, 11, 1, 1, 1)   # Right button
-            
-            # Update the Add Note button to span 3 columns (75% of width)
-            self._layout.removeWidget(self.toanki_button)
-            self._layout.addWidget(self.toanki_button, 12, 0, 1, 3)  # Move up one more row since word is removed
-            
-            # Center the button by adjusting column stretches
-            self._layout.setColumnStretch(0, 1)
-            self._layout.setColumnStretch(1, 0)  # No stretch for center column (image viewer)
             self._layout.setColumnStretch(2, 1)
             
             # Set minimum height for image viewer
@@ -270,11 +263,12 @@ class MainWindowBase(QMainWindow):
             self._layout.addWidget(self.tags, 13, 0, 1, 3)
             self._layout.addWidget(self.word, 6, 0)
             
-            # Remove trim buttons from layout if they exist
-            if hasattr(self, 'trim_before_button') and hasattr(self, 'trim_after_button'):
-                self._layout.removeWidget(self.trim_before_button)
-                self._layout.removeWidget(self.trim_after_button)
-            
+            # Remove trim buttons container from layout if it exists
+            if hasattr(self, 'trim_button_container'):
+                self._layout.removeWidget(self.trim_button_container)
+                self.trim_button_container.deleteLater()
+                del self.trim_button_container
+
             # Restore image viewer position
             self._layout.removeWidget(self.image_viewer)
             self._layout.addWidget(self.image_viewer, 0, 2, 5, 1)
