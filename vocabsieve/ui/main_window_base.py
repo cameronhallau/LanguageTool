@@ -246,6 +246,11 @@ class MainWindowBase(QMainWindow):
             self._layout.setColumnStretch(1, 0)  # No stretch for center column
             self._layout.setColumnStretch(2, 1)
             
+            # Add trim buttons above the Add Note button
+            if hasattr(self, 'trim_before_button') and hasattr(self, 'trim_after_button'):
+                self._layout.addWidget(self.trim_before_button, 11, 0, 1, 1)  # Left button
+                self._layout.addWidget(self.trim_after_button, 11, 1, 1, 1)   # Right button
+            
             # Update the Add Note button to span 3 columns (75% of width)
             self._layout.removeWidget(self.toanki_button)
             self._layout.addWidget(self.toanki_button, 12, 0, 1, 3)  # Move up one more row since word is removed
@@ -264,6 +269,11 @@ class MainWindowBase(QMainWindow):
             self._layout.addWidget(self.view_last_note_button, 14, 0)
             self._layout.addWidget(self.tags, 13, 0, 1, 3)
             self._layout.addWidget(self.word, 6, 0)
+            
+            # Remove trim buttons from layout if they exist
+            if hasattr(self, 'trim_before_button') and hasattr(self, 'trim_after_button'):
+                self._layout.removeWidget(self.trim_before_button)
+                self._layout.removeWidget(self.trim_after_button)
             
             # Restore image viewer position
             self._layout.removeWidget(self.image_viewer)

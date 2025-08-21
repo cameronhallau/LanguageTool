@@ -16,7 +16,7 @@ from loguru import logger
 from markdown import markdown
 from PyQt5.QtCore import QCoreApplication, QStandardPaths, QTimer, QDateTime, QThread, QUrl, pyqtSlot, QThreadPool, pyqtSignal, Qt
 from PyQt5.QtGui import QClipboard, QKeySequence, QPixmap, QDesktopServices, QImage, QTextCursor
-from PyQt5.QtWidgets import QApplication, QMessageBox, QAction, QShortcut, QFileDialog, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QMessageBox, QAction, QShortcut, QFileDialog, QSizePolicy, QPushButton
 
 import qdarktheme
 
@@ -76,6 +76,13 @@ class MainWindow(MainWindowBase):
         app.applicationStateChanged.connect(self.onApplicationStateChanged)
         self.setupMenu()
         self.setupButtons()
+        
+        # Initialize trim buttons
+        self.trim_before_button = QPushButton("Trim Before")
+        self.trim_after_button = QPushButton("Trim After")
+        self.trim_before_button.clicked.connect(self.trimBefore)
+        self.trim_after_button.clicked.connect(self.trimAfter)
+        
         self.updateSimpleView()
         self.startServer()
         self.setupShortcuts()
@@ -349,6 +356,34 @@ class MainWindow(MainWindowBase):
         settings.setValue("simple_view", simple_view)
         self.updateSimpleView()
 
+    def trimBefore(self):
+        """Remove all text before and including the first sentence ending punctuation"""
+        text = self.sentence.toPlainText()
+        import re
+        
+        # Find the first occurrence of .!? followed by optional space
+        match = re.search(r'[.!?]\s*', text)
+        if match:
+            # Get the position after the punctuation and space
+            end_pos = match.end()
+            # Remove everything up to and including the punctuation and space
+            trimmed_text = text[end_pos:].strip()
+            self.sentence.setText(trimmed_text)
+    
+    def trimAfter(self):
+        """Remove all text after the last sentence ending punctuation"""
+        text = self.sentence.toPlainText()
+        import re
+        
+        # Find the last occurrence of .!?
+        match = re.search(r'[.!?](?=[^.!?]*$)', text)
+        if match:
+            # Get the position after the punctuation
+            end_pos = match.end()
+            # Keep everything up to and including the punctuation
+            trimmed_text = text[:end_pos].strip()
+            self.sentence.setText(trimmed_text)
+
     def updateSimpleView(self):
         simple_view = settings.value("simple_view", False, type=bool)
         
@@ -409,6 +444,10 @@ class MainWindow(MainWindowBase):
             self.sentence.setMinimumHeight(80)  # Make top textbox larger
             self.definition.setMinimumHeight(50)  # Make bottom textbox smaller
             self.definition2.setMinimumHeight(50)  # Make bottom textbox smaller
+            
+            # Show trim buttons in simple view
+            self.trim_before_button.setVisible(True)
+            self.trim_after_button.setVisible(True)
         else:
             self.toanki_button.setText(f"Add note [{MOD}+S]")
             self.toanki_button.setStyleSheet("")
@@ -430,6 +469,10 @@ class MainWindow(MainWindowBase):
             self.sentence.setMinimumHeight(50)  # Restore original size
             self.definition.setMinimumHeight(70)  # Restore original size
             self.definition2.setMinimumHeight(70)  # Restore original size
+            
+            # Hide trim buttons in normal view
+            self.trim_before_button.setVisible(False)
+            self.trim_after_button.setVisible(False)
         
         # Update the layout
         self.updateSimpleViewLayout()
