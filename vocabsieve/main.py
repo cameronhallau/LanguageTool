@@ -404,6 +404,11 @@ class MainWindow(MainWindowBase):
             self.sentence.setPlaceholderText("")
             self.definition.setPlaceholderText("")
             self.definition2.setPlaceholderText("")
+            
+            # Adjust text box sizes for simple view
+            self.sentence.setMinimumHeight(80)  # Make top textbox larger
+            self.definition.setMinimumHeight(50)  # Make bottom textbox smaller
+            self.definition2.setMinimumHeight(50)  # Make bottom textbox smaller
         else:
             self.toanki_button.setText(f"Add note [{MOD}+S]")
             self.toanki_button.setStyleSheet("")
@@ -420,6 +425,11 @@ class MainWindow(MainWindowBase):
             # Restore definition placeholder text (will be set by the widget itself)
             self.definition.setPlaceholderText("")
             self.definition2.setPlaceholderText("")
+            
+            # Restore original text box sizes
+            self.sentence.setMinimumHeight(50)  # Restore original size
+            self.definition.setMinimumHeight(70)  # Restore original size
+            self.definition2.setMinimumHeight(70)  # Restore original size
         
         # Update the layout
         self.updateSimpleViewLayout()
