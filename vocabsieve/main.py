@@ -403,6 +403,7 @@ class MainWindow(MainWindowBase):
         
         # Update button text and styling
         if simple_view:
+            # Set simple view stylesheet for Add Note button
             self.toanki_button.setText("Add Note")
             self.toanki_button.setStyleSheet("""
                 QPushButton {
@@ -445,6 +446,9 @@ class MainWindow(MainWindowBase):
             self.definition.setMinimumHeight(50)  # Make bottom textbox smaller
             self.definition2.setMinimumHeight(50)  # Make bottom textbox smaller
             
+            # Enable simple mode for the sentence text box
+            self.sentence.setSimpleViewMode(True)
+
             # Show trim buttons in simple view
             self.trim_before_button.setVisible(True)
             self.trim_after_button.setVisible(True)
@@ -470,6 +474,9 @@ class MainWindow(MainWindowBase):
             self.definition.setMinimumHeight(70)  # Restore original size
             self.definition2.setMinimumHeight(70)  # Restore original size
             
+            # Disable simple mode for the sentence text box
+            self.sentence.setSimpleViewMode(False)
+
             # Hide trim buttons in normal view
             self.trim_before_button.setVisible(False)
             self.trim_after_button.setVisible(False)
