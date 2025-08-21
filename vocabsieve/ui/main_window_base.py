@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QLabel, QPushButt
     QStatusBar, QMenuBar, \
     QSizePolicy, QApplication, QLineEdit
 from PyQt5.QtGui import QDesktopServices, QKeyEvent
-from PyQt5.QtCore import QUrl, pyqtSignal, Qt, QObject, QEvent
+from PyQt5.QtCore import QUrl, pyqtSignal, Qt, QObject, QEvent, QSize
 from .audio_selector import AudioSelector
 
 from .multi_definition_widget import MultiDefinitionWidget
@@ -26,6 +26,19 @@ from sentence_splitter import SentenceSplitter, SentenceSplitterException
 # If on macOS, display the modifier key as "Cmd", else display it as "Ctrl".
 # For whatever reason, Qt automatically uses Cmd key when Ctrl is specified on Mac
 # so there is no need to change the keybind, only the display text
+
+class AspectRatioLabel(QLabel):
+    """A QLabel that maintains a 16:9 aspect ratio"""
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    
+    def sizeHint(self):
+        size = super().sizeHint()
+        # Maintain 16:9 aspect ratio
+        width = size.width()
+        height = int(width * 9 / 16)
+        return QSize(width, height)
 
 class MainWindowBase(QMainWindow):
     audio_fetched = pyqtSignal(dict)
@@ -153,10 +166,11 @@ class MainWindowBase(QMainWindow):
                     True,
                     type=bool)))
 
-        self.image_viewer = QLabel("<center><b>&lt;No image&gt;</center>")
+        self.image_viewer = AspectRatioLabel("<center><b>&lt;No image&gt;</center>")
         self.image_viewer.setScaledContents(True)
         self.image_viewer.setToolTip(f"{MOD}+W to clear the image.")
         self.image_viewer.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.image_viewer.setMinimumHeight(100)
         self.image_viewer.setStyleSheet(
             '''
                 border: 1px solid black;
@@ -204,6 +218,68 @@ class MainWindowBase(QMainWindow):
         layout.setColumnStretch(1, 2)
         layout.setColumnStretch(2, 5)
         self._layout = layout
+        self.updateSimpleViewLayout()
+
+    def updateSimpleViewLayout(self):
+        """Updates the layout for simple view mode"""
+        simple_view = settings.value("simple_view", False, type=bool)
+        
+        if simple_view:
+            # In simple view, make the Add Note button span 75% of the width
+            # Remove the view_last_note_button from layout
+            self._layout.removeWidget(self.view_last_note_button)
+            self.view_last_note_button.hide()
+            
+            # Remove tags from layout
+            self._layout.removeWidget(self.tags)
+            self.tags.hide()
+            
+            # Remove word textbox from layout
+            self._layout.removeWidget(self.word)
+            self.word.hide()
+            
+            # Reposition image viewer to be properly centered and not obscured
+            self._layout.removeWidget(self.image_viewer)
+            self._layout.addWidget(self.image_viewer, 0, 1, 4, 1)  # Move to center column (1) instead of right column (2)
+            # Center the image viewer by adjusting column stretches
+            self._layout.setColumnStretch(0, 1)
+            self._layout.setColumnStretch(1, 0)  # No stretch for center column
+            self._layout.setColumnStretch(2, 1)
+            
+            # Update the Add Note button to span 3 columns (75% of width)
+            self._layout.removeWidget(self.toanki_button)
+            self._layout.addWidget(self.toanki_button, 12, 0, 1, 3)  # Move up one more row since word is removed
+            
+            # Center the button by adjusting column stretches
+            self._layout.setColumnStretch(0, 1)
+            self._layout.setColumnStretch(1, 0)  # No stretch for center column (image viewer)
+            self._layout.setColumnStretch(2, 1)
+            
+            # Set minimum height for image viewer
+            self.image_viewer.setMinimumHeight(100)
+        else:
+            # Restore normal layout
+            self._layout.removeWidget(self.toanki_button)
+            self._layout.addWidget(self.toanki_button, 14, 1, 1, 2)
+            self._layout.addWidget(self.view_last_note_button, 14, 0)
+            self._layout.addWidget(self.tags, 13, 0, 1, 3)
+            self._layout.addWidget(self.word, 6, 0)
+            
+            # Restore image viewer position
+            self._layout.removeWidget(self.image_viewer)
+            self._layout.addWidget(self.image_viewer, 0, 2, 5, 1)
+            
+            self.view_last_note_button.show()
+            self.tags.show()
+            self.word.show()
+            
+            # Restore normal column stretches
+            self._layout.setColumnStretch(0, 2)
+            self._layout.setColumnStretch(1, 2)
+            self._layout.setColumnStretch(2, 5)
+            
+            # Reset image viewer minimum height
+            self.image_viewer.setMinimumHeight(100)
 
     def onHelp(self) -> None:
         url = f"https://docs.freelanguagetools.org/"

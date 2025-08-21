@@ -16,11 +16,11 @@ from loguru import logger
 from markdown import markdown
 from PyQt5.QtCore import QCoreApplication, QStandardPaths, QTimer, QDateTime, QThread, QUrl, pyqtSlot, QThreadPool, pyqtSignal, Qt
 from PyQt5.QtGui import QClipboard, QKeySequence, QPixmap, QDesktopServices, QImage, QTextCursor
-from PyQt5.QtWidgets import QApplication, QMessageBox, QAction, QShortcut, QFileDialog
+from PyQt5.QtWidgets import QApplication, QMessageBox, QAction, QShortcut, QFileDialog, QSizePolicy
 
 import qdarktheme
 
-from .global_names import datapath, lock, app, settings  # First local import
+from .global_names import datapath, lock, app, settings, MOD  # First local import
 from .analyzer import BookAnalyzer
 from .config import ConfigDialog
 from .stats import StatisticsWindow
@@ -76,6 +76,7 @@ class MainWindow(MainWindowBase):
         app.applicationStateChanged.connect(self.onApplicationStateChanged)
         self.setupMenu()
         self.setupButtons()
+        self.updateSimpleView()
         self.startServer()
         self.setupShortcuts()
         self.checkUpdatesOnThread()
@@ -252,6 +253,9 @@ class MainWindow(MainWindowBase):
         self.export_word_scores_action = QAction("Export word scores to JSON")
         self.open_logs_action = QAction("View session logs")
         self.open_data_folder_action = QAction("Open data folder")
+        self.simple_view_action = QAction("Simple View")
+        self.simple_view_action.setCheckable(True)
+        self.simple_view_action.setChecked(settings.value("simple_view", False, type=bool))
 
         if not settings.value("reader_enabled", True, type=bool):
             self.open_reader_action.setEnabled(False)
@@ -265,6 +269,7 @@ class MainWindow(MainWindowBase):
         helpmenu.addAction(self.about_action)
         helpmenu.addAction(self.open_logs_action)
         helpmenu.addAction(self.open_data_folder_action)
+        helpmenu.addAction(self.simple_view_action)
         recordmenu.addAction(self.content_manager_action)
         recordmenu.addAction(self.mark_words_action)
         analyzemenu.addAction(self.analyze_book_action)
@@ -299,6 +304,7 @@ class MainWindow(MainWindowBase):
         self.export_word_scores_action.triggered.connect(self.exportWordData)
         self.mark_words_action.triggered.connect(self.markWords)
         self.open_data_folder_action.triggered.connect(self.onOpenDataFolder)
+        self.simple_view_action.triggered.connect(self.toggleSimpleView)
 
         importmenu.addActions(
             [
@@ -337,6 +343,86 @@ class MainWindow(MainWindowBase):
 
     def onOpenDataFolder(self):
         QDesktopServices.openUrl(QUrl.fromLocalFile(datapath))
+
+    def toggleSimpleView(self):
+        simple_view = self.simple_view_action.isChecked()
+        settings.setValue("simple_view", simple_view)
+        self.updateSimpleView()
+
+    def updateSimpleView(self):
+        simple_view = settings.value("simple_view", False, type=bool)
+        
+        # Show/hide UI elements based on simple view state
+        self.namelabel.setVisible(not simple_view)
+        self.single_word.setVisible(not simple_view)
+        self.lookup_definition_on_doubleclick.setVisible(not simple_view)
+        self.lookup_definition_when_hovering.setVisible(not simple_view)
+        self.read_button.setVisible(not simple_view)
+        self.web_button.setVisible(not simple_view)
+        self.word.setVisible(not simple_view)
+        self.freq_widget.setVisible(not simple_view)
+        self.word_record_display.setVisible(not simple_view)
+        self.audio_selector.setVisible(not simple_view)
+        self.tags.setVisible(not simple_view)
+        self.view_last_note_button.setVisible(not simple_view)
+        
+        # Update button text and styling
+        if simple_view:
+            self.toanki_button.setText("Add Note")
+            self.toanki_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #0078d4;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 8px 16px;
+                    font-size: 14px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #106ebe;
+                }
+                QPushButton:pressed {
+                    background-color: #005a9e;
+                }
+            """)
+            # Center the image viewer
+            self.image_viewer.setAlignment(Qt.AlignCenter)
+            # Ensure the image viewer is properly sized and centered
+            self.image_viewer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            # Update styling for better visibility in simple view
+            self.image_viewer.setStyleSheet("""
+                QLabel {
+                    border: 2px solid #cccccc;
+                    border-radius: 8px;
+                    background-color: #404040;
+                    color: white;
+                    padding: 10px;
+                }
+            """)
+            # Clear placeholder text
+            self.sentence.setPlaceholderText("")
+            self.definition.setPlaceholderText("")
+            self.definition2.setPlaceholderText("")
+        else:
+            self.toanki_button.setText(f"Add note [{MOD}+S]")
+            self.toanki_button.setStyleSheet("")
+            self.image_viewer.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            # Restore normal size policy
+            self.image_viewer.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+            # Restore normal styling
+            self.image_viewer.setStyleSheet("""
+                border: 1px solid black;
+            """)
+            # Restore placeholder text
+            self.sentence.setPlaceholderText("Sentence copied to the clipboard will show up here.")
+            self.word.setPlaceholderText("Word")
+            # Restore definition placeholder text (will be set by the widget itself)
+            self.definition.setPlaceholderText("")
+            self.definition2.setPlaceholderText("")
+        
+        # Update the layout
+        self.updateSimpleViewLayout()
 
     def onSetBookPath(self):
         path = QFileDialog.getExistingDirectory(
